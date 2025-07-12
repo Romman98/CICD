@@ -7,9 +7,9 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted  # Run on your self-hosted runner
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -17,35 +17,33 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Tests
+      - name: Run tests
         run: python -m unittest discover
 
   deploy:
     needs: build
-    runs-on: self-hosted  # Run deploy on your runner too
+    runs-on: [self-hosted, server-runner]  # <--- your server label
     steps:
       - name: Show runner info
         run: |
           hostname
           ip addr show
+
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build Docker image
-        run: docker build -t flask-app:latest .
+      - name: Stop and remove old container
+        run: |
+          docker stop flask-app || true
+          docker rm flask-app || true
 
-      - name: SSH and deploy to server
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            docker stop flask-app || true
-            docker rm flask-app || true
-            docker pull romman1998/flask-app:latest # or build remotely if you prefer
-            docker run -d --name flask-app -p 5000:5000 romman1998/flask-app:latest
+      - name: Build and run Docker container
+        run: |
+          docker build -t flask-app:latest .
+          docker run -d --name flask-app -p 5000:5000 flask-app:latest
 
+      - name: Cleanup unused images
+        run: docker system prune -f
