@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Run on your self-hosted runner
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -25,13 +25,22 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Run deploy on your runner too
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build and Push Docker Image
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          docker build -t romman1998/flask-app .
-          docker push romman1998/flask-app
+      - name: Build Docker image
+        run: docker build -t flask-app:latest .
+
+      - name: SSH and Deploy
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker stop flask-app || true
+            docker rm flask-app || true
+            docker run -d --name flask-app -p 5000:5000 flask-app:latest
+
