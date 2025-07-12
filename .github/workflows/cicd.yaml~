@@ -40,10 +40,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set +e  # allow non-zero exit codes without failing the job
             docker stop flask-app || true
             docker rm flask-app || true
-            set -e  # turn error checking back on
-            docker build -t flask-app:latest
             docker run -d --name flask-app -p 5000:5000 flask-app:latest
 
