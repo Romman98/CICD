@@ -11,5 +11,5 @@ if __name__ == "__main__":
 
 
 
-def add():
-    return 1+2
+def adder(a,b):
+    return a,b
